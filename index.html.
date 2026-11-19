@@ -3,140 +3,226 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Oltre il tempo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oltre il tempo – Il presepe</title>
 
 <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
 <style>
-body { margin:0; font-family:Arial,sans-serif; background:#06132d; }
+body {
+  margin: 0;
+  background: #07142e;
+  color: white;
+  font-family: Arial, sans-serif;
+}
 #intro {
-position:fixed; inset:0; z-index:10;
-display:flex; flex-direction:column;
-justify-content:center; align-items:center;
-text-align:center; padding:25px;
-color:white; background:radial-gradient(#183b70,#06132d);
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  pointer-events: none;
 }
-h1 { color:#ffd66b; letter-spacing:3px; }
-button {
-padding:15px 25px; border:0; border-radius:30px;
-background:#ffd66b; color:#14213d;
-font-size:18px; font-weight:bold;
+h1 { font-size: 23px; margin: 5px; letter-spacing: 2px; }
+p { font-size: 14px; }
+#start {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 17px 26px;
+  border: 0;
+  border-radius: 14px;
+  background: #f5d36b;
+  color: #17213a;
+  font-size: 18px;
+  font-weight: bold;
 }
-#message {
-position:fixed; top:15px; left:10px; right:10px;
-z-index:5; color:white; text-align:center;
-text-shadow:0 2px 5px black;
-}
-a-scene { position:fixed; inset:0; }
+a-scene { width: 100vw; height: 100vh; }
 </style>
+
+<script>
+AFRAME.registerComponent('star3d', {
+  init: function () {
+    const shape = new THREE.Shape();
+    const outer = 0.48;
+    const inner = 0.21;
+
+    for (let i = 0; i < 10; i++) {
+      const radius = i % 2 === 0 ? outer : inner;
+      const angle = -Math.PI / 2 + i * Math.PI / 5;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      if (i === 0) shape.moveTo(x, y);
+      else shape.lineTo(x, y);
+    }
+    shape.closePath();
+
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.12,
+      bevelEnabled: true,
+      bevelSegments: 4,
+      steps: 1,
+      bevelSize: 0.025,
+      bevelThickness: 0.025
+    });
+
+    geometry.center();
+
+    const white = new THREE.MeshStandardMaterial({
+      color: 0xfff8df,
+      emissive: 0xffe9a6,
+      emissiveIntensity: 1.4,
+      metalness: 0.25,
+      roughness: 0.2
+    });
+
+    const gold = new THREE.MeshStandardMaterial({
+      color: 0xe5a928,
+      emissive: 0x9c5d08,
+      emissiveIntensity: 0.8,
+      metalness: 0.85,
+      roughness: 0.22
+    });
+
+    const star = new THREE.Mesh(geometry, [white, gold]);
+    this.el.object3D.add(star);
+  }
+});
+
+AFRAME.registerComponent('soft-halo', {
+  init: function () {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    const gradient = ctx.createRadialGradient(128,128,4,128,128,128);
+    gradient.addColorStop(0, 'rgba(255,255,230,0.9)');
+    gradient.addColorStop(0.18, 'rgba(255,226,145,0.45)');
+    gradient.addColorStop(0.48, 'rgba(255,190,75,0.16)');
+    gradient.addColorStop(1, 'rgba(255,180,50,0)');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0,0,256,256);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
+    });
+
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.9, 1.9),
+      material
+    );
+    plane.position.z = -0.13;
+    this.el.object3D.add(plane);
+  }
+});
+
+AFRAME.registerComponent('sparkle-field', {
+  init: function () {
+    this.particles = [];
+    const group = new THREE.Group();
+
+    for (let i = 0; i < 42; i++) {
+      const size = 0.009 + Math.random() * 0.018;
+      const geometry = new THREE.SphereGeometry(size, 8, 8);
+      const material = new THREE.MeshBasicMaterial({
+        color: i % 3 === 0 ? 0xffffff : 0xffd66b,
+        transparent: true,
+        opacity: 0.9
+      });
+
+      const particle = new THREE.Mesh(geometry, material);
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 0.42 + Math.random() * 0.48;
+
+      particle.position.set(
+        Math.cos(angle) * radius,
+        Math.sin(angle) * radius,
+        Math.random() * 0.25
+      );
+
+      group.add(particle);
+      this.particles.push({
+        mesh: particle,
+        phase: Math.random() * Math.PI * 2,
+        speed: 1 + Math.random() * 2
+      });
+    }
+
+    this.el.object3D.add(group);
+  },
+
+  tick: function (time) {
+    this.particles.forEach(p => {
+      const glow = 0.35 + 0.65 *
+        (0.5 + 0.5 * Math.sin(time * 0.003 * p.speed + p.phase));
+
+      p.mesh.material.opacity = glow;
+      p.mesh.scale.setScalar(0.6 + glow * 0.8);
+    });
+  }
+});
+</script>
 </head>
 
 <body>
-
 <div id="intro">
-<h1>OLTRE IL TEMPO</h1>
-<p>La stella del presepe sta per prendere vita.</p>
-<p>Inquadra la stella stampata e scopri la magia.</p>
-<button id="start">INIZIA L'ESPERIENZA</button>
+  <h1>OLTRE IL TEMPO</h1>
+  <p>Inquadra la stella e scopri la sorpresa</p>
 </div>
 
-<div id="message">Inquadra la stella sul foglio</div>
+<button id="start">✨ INIZIA</button>
 
 <a-scene
-mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiScanning: false; uiLoading: false;"
-vr-mode-ui="enabled: false"
-device-orientation-permission-ui="enabled: false"
-embedded>
+  mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiScanning: true;"
+  color-space="sRGB"
+  renderer="colorManagement: true; physicallyCorrectLights: true"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false">
 
-<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-<a-entity id="target" mindar-image-target="targetIndex: 0">
+  <a-entity mindar-image-target="targetIndex: 0">
 
-<!-- Alone dorato -->
-<a-ring position="0 0 0.05"
-radius-inner="0.35" radius-outer="0.43"
-material="color:#ffd66b; shader:flat; opacity:0.9"
-animation="property:rotation; to:0 0 360; dur:8000; loop:true">
-</a-ring>
+    <a-entity
+      position="0 0 0.15"
+      animation__rise="property: position; to: 0 0 0.65; dur: 2200; easing: easeOutCubic"
+      animation__breathe="property: scale; from: 0.8 0.8 0.8; to: 1 1 1; dir: alternate; dur: 1800; loop: true">
 
-<!-- Stella centrale -->
-<a-entity id="star" position="0 0 0.15"
-animation__move="property:position; from:0 0 0.15; to:0 0 1; dur:1800; dir:alternate; loop:true"
-animation__size="property:scale; from:0.5 0.5 0.5; to:1.3 1.3 1.3; dur:1800; dir:alternate; loop:true">
+      <a-entity soft-halo></a-entity>
 
-<a-sphere radius="0.13"
-material="color:#fff4bd; emissive:#ffd34f; emissiveIntensity:2">
-</a-sphere>
+      <a-entity
+        star3d
+        animation="property: rotation; to: 0 0 360; dur: 18000; loop: true; easing: linear">
+      </a-entity>
 
-<a-box width="0.12" height="0.85" depth="0.05"
-material="color:#ffd34f; emissive:#ffbd36; emissiveIntensity:1">
-</a-box>
+      <a-entity sparkle-field></a-entity>
 
-<a-box width="0.85" height="0.12" depth="0.05"
-material="color:#ffd34f; emissive:#ffbd36; emissiveIntensity:1">
-</a-box>
+      <a-light type="point" color="#ffe4a0" intensity="1.5" distance="3"></a-light>
 
-<a-box width="0.10" height="0.65" depth="0.05"
-rotation="0 0 45"
-material="color:#ffe28a; emissive:#ffbd36; emissiveIntensity:1">
-</a-box>
-
-<a-box width="0.10" height="0.65" depth="0.05"
-rotation="0 0 -45"
-material="color:#ffe28a; emissive:#ffbd36; emissiveIntensity:1">
-</a-box>
-</a-entity>
-
-<!-- Scintille -->
-<a-sphere position="-0.45 0.3 0.4" radius="0.035"
-material="color:#fff2a8; emissive:#ffd34f"
-animation="property:scale; to:2 2 2; dur:900; dir:alternate; loop:true">
-</a-sphere>
-
-<a-sphere position="0.4 0.25 0.5" radius="0.03"
-material="color:#fff2a8; emissive:#ffd34f"
-animation="property:scale; to:2 2 2; dur:1100; dir:alternate; loop:true">
-</a-sphere>
-
-<a-sphere position="0.35 -0.35 0.4" radius="0.03"
-material="color:#fff2a8; emissive:#ffd34f"
-animation="property:scale; to:2 2 2; dur:800; dir:alternate; loop:true">
-</a-sphere>
-
-</a-entity>
+    </a-entity>
+  </a-entity>
 </a-scene>
 
 <script>
-const scene = document.querySelector("a-scene");
-const intro = document.getElementById("intro");
-const message = document.getElementById("message");
-const target = document.getElementById("target");
+const button = document.querySelector("#start");
 
-document.getElementById("start").addEventListener("click", () => {
-intro.style.display = "none";
-message.textContent = "Avvio della fotocamera...";
-
-scene.addEventListener("arReady", () => {
-message.textContent = "Inquadra la stella stampata!";
-}, {once:true});
-
-scene.addEventListener("arError", () => {
-message.textContent = "Errore fotocamera: controlla i permessi.";
-}, {once:true});
-
-target.addEventListener("targetFound", () => {
-message.textContent = "La stella è apparsa! ✨";
-});
-
-target.addEventListener("targetLost", () => {
-message.textContent = "Inquadra nuovamente la stella.";
-});
-
-scene.systems["mindar-image-system"].start();
+button.addEventListener("click", async () => {
+  button.style.display = "none";
+  const scene = document.querySelector("a-scene");
+  const system = scene.systems["mindar-image-system"];
+  await system.start();
 });
 </script>
-
 </body>
 </html>
